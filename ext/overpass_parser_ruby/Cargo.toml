@@ -11,3 +11,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 magnus = { version = "0.6.2" }
+overpass_parser_rust = { git = "https://github.com/teritorio/overpass_parser_rust", branch = "master" }
