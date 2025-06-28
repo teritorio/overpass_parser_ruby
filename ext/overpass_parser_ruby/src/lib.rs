@@ -1,4 +1,6 @@
-use magnus::{function, method, prelude::*, DataTypeFunctions, TypedData};
+use magnus::{
+    eval, function, method, prelude::*, DataTypeFunctions, Error, ExceptionClass, TypedData,
+};
 use overpass_parser_rust::{
     overpass_parser::{self, request::Request},
     sql_dialect,
@@ -7,10 +9,13 @@ use overpass_parser_rust::{
 fn parse(query: String) -> Result<RequestWrapper, magnus::Error> {
     match overpass_parser::parse_query(query.as_str()) {
         Ok(request) => Ok(RequestWrapper::new(request)),
-        Err(e) => Err(magnus::Error::new(
-            magnus::exception::runtime_error(),
-            format!("Failed to parse query: {}", e),
-        )),
+        Err(e) => {
+            let error_class: ExceptionClass = eval("OverpassParserRuby::ParsingError").unwrap();
+            Err(Error::new(
+                error_class,
+                format!("Failed to parse query: {}", e),
+            ))
+        }
     }
 }
 
@@ -54,6 +59,11 @@ fn init() {
         .unwrap();
     request_class
         .define_method("to_sql", method!(RequestWrapper::to_sql, 2))
+        .unwrap();
+
+    let runtime_error_class = eval("RuntimeError").unwrap();
+    module
+        .define_class("ParsingError", runtime_error_class)
         .unwrap();
 }
 

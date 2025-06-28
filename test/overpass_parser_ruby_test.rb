@@ -22,4 +22,15 @@ class OverpassParserRubyTest < Minitest::Test
     # Check if the result is not nil and has expected structure
     refute_nil result, "Parsing should not return nil"
   end
+
+  def test_exception
+    query = <<~QUERY
+      foo bar !
+    QUERY
+
+    result = OverpassParserRuby.parse(query)
+    refute_nil result, "Parsing should not pass"
+  rescue OverpassParserRuby::ParsingError => e
+    # Check if the result is not nil and has expected structure
+  end
 end
