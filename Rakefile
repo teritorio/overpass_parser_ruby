@@ -2,6 +2,7 @@
 
 require "bundler/gem_tasks"
 require "rubocop/rake_task"
+require "minitest/test_task"
 
 RuboCop::RakeTask.new
 
@@ -14,5 +15,7 @@ GEMSPEC = Gem::Specification.load("overpass_parser_ruby.gemspec")
 RbSys::ExtensionTask.new("overpass_parser_ruby", GEMSPEC) do |ext|
   ext.lib_dir = "lib/overpass_parser_ruby"
 end
+
+Minitest::TestTask.create
 
 task default: %i[compile rubocop]
