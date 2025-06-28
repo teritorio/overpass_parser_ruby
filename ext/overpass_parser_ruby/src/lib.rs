@@ -32,7 +32,7 @@ impl RequestWrapper {
         Self { inner: request }
     }
 
-    fn to_sql(&self, dialect: String, srid: String) -> Result<String, magnus::Error> {
+    fn to_sql(&self, dialect: String, srid: u32) -> Result<String, magnus::Error> {
         let sql_dialect: Box<dyn sql_dialect::sql_dialect::SqlDialect> = match dialect.as_str() {
             "postgres" => Box::new(sql_dialect::postgres::postgres::Postgres::default()),
             "duckdb" => Box::new(sql_dialect::duckdb::duckdb::Duckdb),
@@ -43,7 +43,9 @@ impl RequestWrapper {
                 ));
             }
         };
-        Ok(self.inner.to_sql(&sql_dialect, srid.as_str(), None))
+        Ok(self
+            .inner
+            .to_sql(&sql_dialect, srid.to_string().as_str(), None))
     }
 }
 
