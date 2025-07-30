@@ -81,9 +81,9 @@ checksum = "7b02b629252fe8ef6460461409564e2c21d0c8e77e0944f3d189ff06c4e932ad"
 
 [[package]]
 name = "cc"
-version = "1.2.27"
+version = "1.2.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d487aa071b5f64da6f19a3e848e3578944b726ee5a4854b82172f02aa876bfdc"
+checksum = "deec109607ca693028562ed836a5f1c4b8bd77755c4e132fc5ce11b0b6211ae7"
 dependencies = [
  "shlex",
 ]
@@ -344,14 +344,13 @@ dependencies = [
 [[package]]
 name = "overpass_parser_rust"
 version = "0.1.0"
-source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#93cb45cd98d7da9c8b8deb7ebe5032d7cc7c67fb"
+source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#9cfd74a89e9196f9acf63c1682a781c1b77ec636"
 dependencies = [
  "derivative",
  "pest",
  "pest_derive",
  "regex",
  "rust_string_utils",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -711,10 +710,11 @@ dependencies = [
 
 [[package]]
 name = "windows-targets"
-version = "0.53.2"
+version = "0.53.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c66f69fcc9ce11da9966ddb31a40968cad001c5bedeb5c2b82ede4253ab48aef"
+checksum = "d5fe6031c4041849d7c496a8ded650796e7b6ecc19df1a431c1a363342e5dc91"
 dependencies = [
+ "windows-link",
  "windows_aarch64_gnullvm",
  "windows_aarch64_msvc",
  "windows_i686_gnu",

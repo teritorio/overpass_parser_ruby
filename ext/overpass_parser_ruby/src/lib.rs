@@ -33,9 +33,9 @@ impl RequestWrapper {
     }
 
     fn to_sql(&self, dialect: String, srid: u32) -> Result<String, magnus::Error> {
-        let sql_dialect: Box<dyn sql_dialect::sql_dialect::SqlDialect> = match dialect.as_str() {
-            "postgres" => Box::new(sql_dialect::postgres::postgres::Postgres::default()),
-            "duckdb" => Box::new(sql_dialect::duckdb::duckdb::Duckdb),
+        let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
+            "postgres" => &sql_dialect::postgres::postgres::Postgres::default(),
+            "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
                 return Err(magnus::Error::new(
                     magnus::exception::runtime_error(),
@@ -45,7 +45,7 @@ impl RequestWrapper {
         };
         Ok(self
             .inner
-            .to_sql(&sql_dialect, srid.to_string().as_str(), None))
+            .to_sql(sql_dialect, srid.to_string().as_str(), None))
     }
 }
 
