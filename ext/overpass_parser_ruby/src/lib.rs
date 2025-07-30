@@ -13,7 +13,7 @@ fn parse(query: String) -> Result<RequestWrapper, magnus::Error> {
             let error_class: ExceptionClass = eval("OverpassParserRuby::ParsingError").unwrap();
             Err(Error::new(
                 error_class,
-                format!("Failed to parse query: {}", e),
+                format!("Failed to parse query: {e}"),
             ))
         }
     }
