@@ -1,8 +1,9 @@
 use magnus::{
-    eval, function, method, prelude::*, DataTypeFunctions, Error, ExceptionClass, TypedData,
+    eval, function, method, prelude::*, r_hash::ForEach, DataTypeFunctions, Error, ExceptionClass,
+    RHash, TypedData, Value,
 };
 use overpass_parser_rust::{
-    overpass_parser::{self, request::Request},
+    overpass_parser::{self, request::Request, selectors::Selectors, subrequest::QueryType},
     sql_dialect,
 };
 
@@ -47,6 +48,67 @@ impl RequestWrapper {
             .inner
             .to_sql(sql_dialect, srid.to_string().as_str(), None))
     }
+
+    fn first_selectors(&self) -> Result<SelectorsWrapper, magnus::Error> {
+        let first_subrequest = self.inner.subrequests.first().ok_or_else(|| {
+            magnus::Error::new(
+                magnus::exception::runtime_error(),
+                "No subrequests found in the request".to_string(),
+            )
+        })?;
+        let first_query = first_subrequest
+            .queries
+            .first()
+            .ok_or_else(|| {
+                magnus::Error::new(
+                    magnus::exception::runtime_error(),
+                    "No queries found in the first subrequest".to_string(),
+                )
+            })?
+            .as_ref();
+        match first_query {
+            QueryType::QueryObjects(query_objects) => {
+                Ok(SelectorsWrapper::new(query_objects.selectors.clone()))
+            }
+            _ => {
+                Err(magnus::Error::new(
+                    magnus::exception::runtime_error(),
+                    "First query is not a QueryObjects".to_string(),
+                ))
+            }
+        }
+    }
+}
+
+#[derive(TypedData)]
+#[magnus(class = "OverpassParserRuby::Selectors", free_immediately, size)]
+struct SelectorsWrapper {
+    inner: Selectors,
+}
+
+impl DataTypeFunctions for SelectorsWrapper {}
+
+impl SelectorsWrapper {
+    fn new(selectors: Selectors) -> Self {
+        Self { inner: selectors }
+    }
+
+    fn matches(&self, rtags: RHash) -> Result<Option<Vec<&str>>, magnus::Error> {
+        let mut owned_pairs: Vec<(String, String)> = Vec::new();
+        rtags.foreach(|key: Value, value: Value| {
+            let key_str = key.to_string().clone();
+            let value_str = value.to_string();
+            owned_pairs.push((key_str, value_str));
+            Ok(ForEach::Continue)
+        })?;
+
+        let tags = owned_pairs
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+
+        Ok(self.inner.matches(&tags))
+    }
 }
 
 fn init() {
@@ -56,11 +118,24 @@ fn init() {
         .define_singleton_method("parse", function!(parse, 1))
         .unwrap();
 
+    let selectors_class = module
+        .define_class("Selectors", magnus::class::object())
+        .unwrap();
+    selectors_class
+        .define_method("matches", method!(SelectorsWrapper::matches, 1))
+        .unwrap();
+
     let request_class = module
         .define_class("Request", magnus::class::object())
         .unwrap();
     request_class
         .define_method("to_sql", method!(RequestWrapper::to_sql, 2))
+        .unwrap();
+    request_class
+        .define_method(
+            "first_selectors",
+            method!(RequestWrapper::first_selectors, 0),
+        )
         .unwrap();
 
     let runtime_error_class = eval("RuntimeError").unwrap();

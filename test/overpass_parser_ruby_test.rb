@@ -37,4 +37,14 @@ class OverpassParserRubyTest < Minitest::Test
   rescue OverpassParserRuby::ParsingError => e
     # Check if the result is not nil and has expected structure
   end
+
+  def test_selectors
+    tree = OverpassParserRuby.parse("node[shop];")
+    selectors = tree.first_selectors
+
+    assert_equal(
+      selectors.matches({ "shop" => "supermarket" }),
+      ["shop"]
+    )
+  end
 end
