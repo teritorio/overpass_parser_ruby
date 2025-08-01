@@ -118,6 +118,24 @@ impl SelectorsWrapper {
             .collect::<Vec<&str>>()
             .into())
     }
+
+    fn to_sql(&self, dialect: String, srid: u32) -> Result<String, magnus::Error> {
+        let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
+            "postgres" => &sql_dialect::postgres::postgres::Postgres::default(),
+            "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
+            _ => {
+                return Err(magnus::Error::new(
+                    magnus::exception::runtime_error(),
+                    "Unsupported SQL dialect".to_string(),
+                ));
+            }
+        };
+        Ok(self.inner.to_sql(sql_dialect, srid.to_string().as_str()))
+    }
+
+    fn to_overpass(&self) -> Result<String, magnus::Error> {
+        Ok(self.inner.to_overpass())
+    }
 }
 
 fn init() {
@@ -135,6 +153,12 @@ fn init() {
         .unwrap();
     selectors_class
         .define_method("keys", method!(SelectorsWrapper::keys, 0))
+        .unwrap();
+    selectors_class
+        .define_method("to_sql", method!(SelectorsWrapper::to_sql, 2))
+        .unwrap();
+    selectors_class
+        .define_method("to_overpass", method!(SelectorsWrapper::to_overpass, 0))
         .unwrap();
 
     let request_class = module

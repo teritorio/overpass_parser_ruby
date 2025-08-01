@@ -47,8 +47,8 @@ class OverpassParserRubyTest < Minitest::Test
       ["shop"]
     )
 
-    assert_equal(
-      selectors.keys, ["shop"]
-    )
+    assert_equal(selectors.keys, ["shop"])
+    assert_equal(selectors.to_sql("postgres", 4326), "tags?'shop'")
+    assert_equal(selectors.to_overpass, "[shop]")
   end
 end
