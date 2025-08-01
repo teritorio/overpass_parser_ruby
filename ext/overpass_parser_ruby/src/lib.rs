@@ -70,12 +70,10 @@ impl RequestWrapper {
             QueryType::QueryObjects(query_objects) => {
                 Ok(SelectorsWrapper::new(query_objects.selectors.clone()))
             }
-            _ => {
-                Err(magnus::Error::new(
-                    magnus::exception::runtime_error(),
-                    "First query is not a QueryObjects".to_string(),
-                ))
-            }
+            _ => Err(magnus::Error::new(
+                magnus::exception::runtime_error(),
+                "First query is not a QueryObjects".to_string(),
+            )),
         }
     }
 }
