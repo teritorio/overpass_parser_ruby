@@ -81,9 +81,9 @@ checksum = "7b02b629252fe8ef6460461409564e2c21d0c8e77e0944f3d189ff06c4e932ad"
 
 [[package]]
 name = "cc"
-version = "1.2.30"
+version = "1.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "deec109607ca693028562ed836a5f1c4b8bd77755c4e132fc5ce11b0b6211ae7"
+checksum = "c3a42d84bb6b69d3a8b3eaacf0d88f179e1929695e1ad012b6cf64d9caaa5fd2"
 dependencies = [
  "shlex",
 ]
@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "overpass_parser_rust"
 version = "0.1.0"
-source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#9cfd74a89e9196f9acf63c1682a781c1b77ec636"
+source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#26cff59aa54b13e9e01c4691e8246997a53e0002"
 dependencies = [
  "derivative",
  "pest",

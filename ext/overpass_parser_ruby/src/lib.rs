@@ -109,6 +109,17 @@ impl SelectorsWrapper {
 
         Ok(self.inner.matches(&tags))
     }
+
+    fn keys(&self) -> Result<Option<Vec<&str>>, magnus::Error> {
+        Ok(self
+            .inner
+            .selectors
+            .iter()
+            .filter(|selector| !selector.not)
+            .map(|selector| selector.key.as_ref())
+            .collect::<Vec<&str>>()
+            .into())
+    }
 }
 
 fn init() {
@@ -123,6 +134,9 @@ fn init() {
         .unwrap();
     selectors_class
         .define_method("matches", method!(SelectorsWrapper::matches, 1))
+        .unwrap();
+    selectors_class
+        .define_method("keys", method!(SelectorsWrapper::keys, 0))
         .unwrap();
 
     let request_class = module

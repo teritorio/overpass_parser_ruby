@@ -46,5 +46,9 @@ class OverpassParserRubyTest < Minitest::Test
       selectors.matches({ "shop" => "supermarket" }),
       ["shop"]
     )
+
+    assert_equal(
+      selectors.keys, ["shop"]
+    )
   end
 end
