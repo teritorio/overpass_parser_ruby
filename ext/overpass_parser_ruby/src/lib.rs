@@ -3,7 +3,12 @@ use magnus::{
     RHash, TypedData, Value,
 };
 use overpass_parser_rust::{
-    overpass_parser::{self, request::Request, selectors::Selectors, subrequest::QueryType},
+    overpass_parser::{
+        self,
+        request::Request,
+        selectors::Selectors,
+        subrequest::{QueryType, SubrequestType},
+    },
     sql_dialect,
 };
 
@@ -50,13 +55,9 @@ impl RequestWrapper {
     }
 
     fn first_selectors(&self) -> Result<SelectorsWrapper, magnus::Error> {
-        let first_subrequest = self.inner.subrequests.first().ok_or_else(|| {
-            magnus::Error::new(
-                magnus::exception::runtime_error(),
-                "No subrequests found in the request".to_string(),
-            )
-        })?;
-        let first_query = first_subrequest
+        let first_query = self
+            .inner
+            .subrequest
             .queries
             .first()
             .ok_or_else(|| {
@@ -67,12 +68,18 @@ impl RequestWrapper {
             })?
             .as_ref();
         match first_query {
-            QueryType::QueryObjects(query_objects) => {
-                Ok(SelectorsWrapper::new(query_objects.selectors.clone()))
-            }
+            SubrequestType::QueryType(query_nodes) => match query_nodes {
+                QueryType::QueryObjects(query_objects) => {
+                    Ok(SelectorsWrapper::new(query_objects.selectors.clone()))
+                }
+                _ => Err(magnus::Error::new(
+                    magnus::exception::runtime_error(),
+                    "First query is not a QueryObjects".to_string(),
+                )),
+            },
             _ => Err(magnus::Error::new(
                 magnus::exception::runtime_error(),
-                "First query is not a QueryObjects".to_string(),
+                "First subrequest is not a QueryType".to_string(),
             )),
         }
     }
