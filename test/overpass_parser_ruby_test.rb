@@ -22,7 +22,7 @@ class OverpassParserRubyTest < Minitest::Test
     # Check if the result is not nil and has expected structure
     refute_nil result, "Parsing should not return nil"
 
-    sql = result.to_sql("postgres", 4326)
+    sql = result.to_sql("postgres", 4326, proc { |s| "_#{s}_" })
 
     refute_nil sql, "SQL generation should not return nil"
   end

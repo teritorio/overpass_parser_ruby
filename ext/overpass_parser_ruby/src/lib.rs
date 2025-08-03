@@ -1,6 +1,8 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use magnus::{
-    eval, function, method, prelude::*, r_hash::ForEach, DataTypeFunctions, Error, ExceptionClass,
-    RHash, TypedData, Value,
+    block::Proc, eval, function, method, prelude::*, r_hash::ForEach, DataTypeFunctions, Error,
+    ExceptionClass, RHash, TypedData, Value,
 };
 use overpass_parser_rust::{
     overpass_parser::{
@@ -33,14 +35,51 @@ struct RequestWrapper {
 
 impl DataTypeFunctions for RequestWrapper {}
 
+thread_local! {
+    static RUBY_PROCS: RefCell<HashMap<u64, Proc>> = RefCell::new(HashMap::new());
+}
+
+static PROC_ID_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+fn build_postgres_dialect(quote: Option<Proc>) -> sql_dialect::postgres::postgres::Postgres {
+    // Store the proc in thread-local storage
+    let proc_id = PROC_ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    if quote.is_some() {
+        RUBY_PROCS.with(|procs| {
+            procs.borrow_mut().insert(proc_id, quote.unwrap());
+        });
+    }
+
+    sql_dialect::postgres::postgres::Postgres {
+        postgres_escape_literal: match quote {
+            Some(_) => Some(Box::new(move |str| {
+                RUBY_PROCS.with(|procs| {
+                    if let Some(proc) = procs.borrow().get(&proc_id) {
+                        proc.call::<(&str,), String>((str,)).unwrap()
+                    } else {
+                        panic!("Quote proc is None")
+                    }
+                })
+            })),
+            None => None,
+        },
+        ..sql_dialect::postgres::postgres::Postgres::default()
+    }
+}
+
 impl RequestWrapper {
     fn new(request: Request) -> Self {
         Self { inner: request }
     }
 
-    fn to_sql(&self, dialect: String, srid: u32) -> Result<String, magnus::Error> {
+    fn to_sql(
+        &self,
+        dialect: String,
+        srid: u32,
+        quote: Option<Proc>,
+    ) -> Result<String, magnus::Error> {
         let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
-            "postgres" => &sql_dialect::postgres::postgres::Postgres::default(),
+            "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
                 return Err(magnus::Error::new(
@@ -126,9 +165,14 @@ impl SelectorsWrapper {
             .into())
     }
 
-    fn to_sql(&self, dialect: String, srid: u32) -> Result<String, magnus::Error> {
+    fn to_sql(
+        &self,
+        dialect: String,
+        srid: u32,
+        quote: Option<Proc>,
+    ) -> Result<String, magnus::Error> {
         let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
-            "postgres" => &sql_dialect::postgres::postgres::Postgres::default(),
+            "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
                 return Err(magnus::Error::new(
@@ -162,7 +206,7 @@ fn init() {
         .define_method("keys", method!(SelectorsWrapper::keys, 0))
         .unwrap();
     selectors_class
-        .define_method("to_sql", method!(SelectorsWrapper::to_sql, 2))
+        .define_method("to_sql", method!(SelectorsWrapper::to_sql, 3))
         .unwrap();
     selectors_class
         .define_method("to_overpass", method!(SelectorsWrapper::to_overpass, 0))
@@ -172,7 +216,7 @@ fn init() {
         .define_class("Request", magnus::class::object())
         .unwrap();
     request_class
-        .define_method("to_sql", method!(RequestWrapper::to_sql, 2))
+        .define_method("to_sql", method!(RequestWrapper::to_sql, 3))
         .unwrap();
     request_class
         .define_method(

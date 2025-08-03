@@ -344,7 +344,7 @@ dependencies = [
 [[package]]
 name = "overpass_parser_rust"
 version = "0.1.0"
-source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#faff90a26e3e644a3b567aef55880c209386690c"
+source = "git+https://github.com/teritorio/overpass_parser_rust?branch=master#da659a00694dcca15e139ca65467b8c8ea8f3346"
 dependencies = [
  "derivative",
  "pest",
