@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use magnus::{
     block::Proc, eval, function, method, prelude::*, r_hash::ForEach, DataTypeFunctions, Error,
-    ExceptionClass, RHash, TypedData, Value,
+    ExceptionClass, IntoValue, RArray, RHash, TypedData, Value,
 };
 use overpass_parser_rust::{
     overpass_parser::{
@@ -93,34 +93,38 @@ impl RequestWrapper {
             .to_sql(sql_dialect, srid.to_string().as_str(), None))
     }
 
-    fn first_selectors(&self) -> Result<SelectorsWrapper, magnus::Error> {
-        let first_query = self
-            .inner
+    fn all_selectors_inner(&self, query_type: &QueryType) -> Result<Vec<Selectors>, magnus::Error> {
+        match query_type {
+            QueryType::QueryObjects(query_objects) => Ok(vec![query_objects.selectors.clone()]),
+            QueryType::QueryUnion(query_union) => Ok(query_union
+                .queries
+                .iter()
+                .map(|subquery| self.all_selectors_inner(subquery).ok().unwrap())
+                .flatten()
+                .collect()),
+            QueryType::QueryRecurse(_) => Ok(vec![]),
+        }
+    }
+
+    fn all_selectors(&self) -> Result<RArray, magnus::Error> {
+        let r = RArray::new();
+        self.inner
             .subrequest
             .queries
-            .first()
-            .ok_or_else(|| {
-                magnus::Error::new(
-                    magnus::exception::runtime_error(),
-                    "No queries found in the first subrequest".to_string(),
-                )
-            })?
-            .as_ref();
-        match first_query {
-            SubrequestType::QueryType(query_nodes) => match query_nodes {
-                QueryType::QueryObjects(query_objects) => {
-                    Ok(SelectorsWrapper::new(query_objects.selectors.clone()))
+            .iter()
+            .filter_map(|query| {
+                if let SubrequestType::QueryType(ref query_type) = **query {
+                    self.all_selectors_inner(query_type).ok()
+                } else {
+                    None
                 }
-                _ => Err(magnus::Error::new(
-                    magnus::exception::runtime_error(),
-                    "First query is not a QueryObjects".to_string(),
-                )),
-            },
-            _ => Err(magnus::Error::new(
-                magnus::exception::runtime_error(),
-                "First subrequest is not a QueryType".to_string(),
-            )),
-        }
+            })
+            .flatten()
+            .filter(|selectors| !selectors.selectors.is_empty())
+            .for_each(|selectors| {
+                let _ = r.push(SelectorsWrapper::new(selectors).into_value());
+            });
+        Ok(r)
     }
 }
 
@@ -219,10 +223,7 @@ fn init() {
         .define_method("to_sql", method!(RequestWrapper::to_sql, 3))
         .unwrap();
     request_class
-        .define_method(
-            "first_selectors",
-            method!(RequestWrapper::first_selectors, 0),
-        )
+        .define_method("all_selectors", method!(RequestWrapper::all_selectors, 0))
         .unwrap();
 
     let runtime_error_class = eval("RuntimeError").unwrap();

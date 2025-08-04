@@ -38,9 +38,9 @@ class OverpassParserRubyTest < Minitest::Test
     # Check if the result is not nil and has expected structure
   end
 
-  def test_selectors
+  def test_selectors_one
     tree = OverpassParserRuby.parse("node[shop];")
-    selectors = tree.first_selectors
+    selectors = tree.all_selectors.first
 
     assert_equal(
       selectors.matches({ "shop" => "supermarket" }),
@@ -48,7 +48,22 @@ class OverpassParserRubyTest < Minitest::Test
     )
 
     assert_equal(selectors.keys, ["shop"])
-    assert_equal(selectors.to_sql("postgres", 4326), "tags?'shop'")
+    assert_equal(selectors.to_sql("postgres", 4326, nil), "tags?'shop'")
     assert_equal(selectors.to_overpass, "[shop]")
+  end
+
+  def test_selectors_all
+    tree = OverpassParserRuby.parse("[out:json][timeout:25];
+area(id:1,2,3)->.a;
+.a out center meta;
+(
+  node[a=b];
+  way[d];
+);
+out center meta;
+")
+    selectors = tree.all_selectors.collect(&:to_overpass)
+
+    assert_equal(selectors, ["[a=b]", "[d]"])
   end
 end
