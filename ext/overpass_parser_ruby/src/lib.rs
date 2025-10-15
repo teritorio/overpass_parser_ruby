@@ -77,7 +77,7 @@ impl RequestWrapper {
         dialect: String,
         srid: u32,
         quote: Option<Proc>,
-    ) -> Result<String, magnus::Error> {
+    ) -> Result<Vec<String>, magnus::Error> {
         let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
             "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
@@ -172,6 +172,7 @@ impl SelectorsWrapper {
     fn to_sql(
         &self,
         dialect: String,
+        table: String,
         srid: u32,
         quote: Option<Proc>,
     ) -> Result<String, magnus::Error> {
@@ -185,7 +186,7 @@ impl SelectorsWrapper {
                 ));
             }
         };
-        Ok(self.inner.to_sql(sql_dialect, srid.to_string().as_str()))
+        Ok(self.inner.to_sql(sql_dialect, table.as_str(), srid.to_string().as_str()))
     }
 
     fn to_overpass(&self) -> Result<String, magnus::Error> {
@@ -210,7 +211,7 @@ fn init() {
         .define_method("keys", method!(SelectorsWrapper::keys, 0))
         .unwrap();
     selectors_class
-        .define_method("to_sql", method!(SelectorsWrapper::to_sql, 3))
+        .define_method("to_sql", method!(SelectorsWrapper::to_sql, 4))
         .unwrap();
     selectors_class
         .define_method("to_overpass", method!(SelectorsWrapper::to_overpass, 0))
