@@ -78,7 +78,7 @@ impl RequestWrapper {
         srid: u32,
         quote: Option<Proc>,
     ) -> Result<Vec<String>, magnus::Error> {
-        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect  = match dialect.as_str() {
+        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect = match dialect.as_str() {
             "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
@@ -99,8 +99,21 @@ impl RequestWrapper {
             QueryType::QueryUnion(query_union) => Ok(query_union
                 .queries
                 .iter()
-                .flat_map(|subquery| self.all_selectors_inner(subquery).ok().unwrap())
+                .flat_map(|subquery| self.all_selectors_inner(&subquery.1).ok().unwrap())
                 .collect()),
+            QueryType::QueryForeach(query_foreach) => Ok(query_foreach
+                .body
+                .queries
+                .iter()
+                .filter_map(|query| match query.as_ref() {
+                    SubrequestType::QueryType(ref query_type) => {
+                        self.all_selectors_inner(query_type).ok()
+                    }
+                    _ => None,
+                })
+                .flatten()
+                .collect()),
+            QueryType::QueryConvert(_) => Ok(vec![]),
             QueryType::QueryRecurse(_) => Ok(vec![]),
         }
     }
@@ -175,7 +188,7 @@ impl SelectorsWrapper {
         srid: u32,
         quote: Option<Proc>,
     ) -> Result<String, magnus::Error> {
-        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect  = match dialect.as_str() {
+        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect = match dialect.as_str() {
             "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
@@ -185,7 +198,9 @@ impl SelectorsWrapper {
                 ));
             }
         };
-        Ok(self.inner.to_sql(sql_dialect, table.as_str(), srid.to_string().as_str()))
+        Ok(self
+            .inner
+            .to_sql(sql_dialect, table.as_str(), srid.to_string().as_str()))
     }
 
     fn to_overpass(&self) -> Result<String, magnus::Error> {
