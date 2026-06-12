@@ -78,7 +78,7 @@ impl RequestWrapper {
         srid: u32,
         quote: Option<Proc>,
     ) -> Result<Vec<String>, magnus::Error> {
-        let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
+        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect  = match dialect.as_str() {
             "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
@@ -99,8 +99,7 @@ impl RequestWrapper {
             QueryType::QueryUnion(query_union) => Ok(query_union
                 .queries
                 .iter()
-                .map(|subquery| self.all_selectors_inner(subquery).ok().unwrap())
-                .flatten()
+                .flat_map(|subquery| self.all_selectors_inner(subquery).ok().unwrap())
                 .collect()),
             QueryType::QueryRecurse(_) => Ok(vec![]),
         }
@@ -176,7 +175,7 @@ impl SelectorsWrapper {
         srid: u32,
         quote: Option<Proc>,
     ) -> Result<String, magnus::Error> {
-        let sql_dialect: &(dyn sql_dialect::sql_dialect::SqlDialect) = match dialect.as_str() {
+        let sql_dialect: &dyn sql_dialect::sql_dialect::SqlDialect  = match dialect.as_str() {
             "postgres" => &build_postgres_dialect(quote),
             "duckdb" => &sql_dialect::duckdb::duckdb::Duckdb,
             _ => {
